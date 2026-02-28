@@ -20,20 +20,26 @@ export default function App() {
     };
 
     mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-
-      const res = await fetch("http://localhost:5000/transcribe", {
-        method: "POST",
-        body: formData,
+      const audioBlob = new Blob(audioChunksRef.current, {
+        type: "audio/webm"
       });
 
-      const data = await res.json();
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
 
-      // update transcript to display on frontend
-      setTranscript(data.transcript);
+      try {
+        const res = await fetch("http://localhost:5000/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        console.log(data);
+        setTranscript(data.transcript);
+
+      } catch (err) {
+        console.error("FETCH ERROR:", err);
+      }
     };
 
     mediaRecorder.start();
