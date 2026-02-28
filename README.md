@@ -31,6 +31,7 @@ This is an early-stage MVP and not intended for real clinical use.
 
 ## 📁 Project Structure
 
+```
 medical-scribe-ai/
 │
 ├── backend/
@@ -42,6 +43,7 @@ medical-scribe-ai/
     ├── package.json
     ├── vite.config.js
     └── src/
+```
 
 ---
 
