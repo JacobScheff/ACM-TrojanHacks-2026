@@ -2,12 +2,16 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import json
+from dotenv import load_dotenv
 from google import genai
 
 app = Flask(__name__)
 CORS(app)
 
-client = genai.Client()
+# Load environment variables from .env file
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
 
 @app.route("/")
 def home():
@@ -22,6 +26,26 @@ def analyze():
     # Import lsit from drug_interactions_list.json
     with open(os.path.join(os.path.dirname(__file__), "drug_interactions_list.json")) as f:
         drug_interactions = json.load(f)
+
+    # Summarize the transcript
+    summaryResponse = response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents="Summarize the transcript by removing any unnecessary words and details, keep only the important medical information.\n\n---\n\n" + transcript
+    )
+    summary = summaryResponse.text
+
+    return jsonify({
+        "summary": summary,
+        "drugInteractions": drug_interactions
+    })
+
+# fetch('http://127.0.0.1:5000/analyze', {
+#   method: 'POST',
+#   headers: { 'Content-Type': 'application/json' },
+#   body: JSON.stringify({ transcript: 'Hello! This is a sentence. This is another word. I am an unncessessary sentence!' })
+# })
+# .then(response => response.json())
+# .then(data => console.log(data));
 
 @app.route("/generate-note", methods=["POST"])
 def generate_note():

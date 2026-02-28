@@ -102,7 +102,12 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Step 4: Run the server
+### Step 4: Install Google Genai
+```bash
+pip install -q -U google-genai
+```
+
+### Step 5: Run the server
 
 ```bash
 python app.py
