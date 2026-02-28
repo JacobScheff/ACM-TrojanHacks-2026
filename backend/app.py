@@ -2,10 +2,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+import whisper
 
 app = Flask(__name__)
 CORS(app)  
@@ -14,6 +16,7 @@ CORS(app)
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
+whisperModel = whisper.load_model("small", device="cpu")
 
 @app.route("/")
 def home():
@@ -130,17 +133,34 @@ def generate_note():
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_audio():
-    audio_file = request.files["audio"]
+    audio_file = request.files.get("audio")
+    if not audio_file or audio_file.filename == "":
+        return jsonify({"error": "No audio file provided"}), 400
 
-    # save the audio file temporarily
-    audio_file.save("temp_audio.webm")
+    # Save the uploaded audio file to a temporary location
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+        audio_file.save(temp_audio.name)
+        temp_audio_path = temp_audio.name
 
-    # TODO: process the audio file and generate transcript using a speech-to-text model
-    transcript = "Patient reports chest pain for 2 days."
-
-    return jsonify({
-        "transcript": transcript
-    })
+    try:
+        result = whisperModel.transcribe(temp_audio_path)
+        transcript = result["text"]
+        return jsonify({"transcript": transcript})
+    except (FileNotFoundError, OSError) as e:
+        err_str = str(e)
+        if "WinError 2" in err_str or "cannot find the file" in err_str.lower():
+            return jsonify({
+                "error": "ffmpeg is required for audio transcription but was not found. Install ffmpeg and add it to your PATH (e.g. winget install ffmpeg, choco install ffmpeg, or scoop install ffmpeg)."
+            }), 500
+        return jsonify({"error": err_str}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(temp_audio_path):
+            try:
+                os.unlink(temp_audio_path)
+            except OSError:
+                pass
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
