@@ -1,13 +1,27 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import json
+from google import genai
 
 app = Flask(__name__)
 CORS(app)
 
+client = genai.Client()
+
 @app.route("/")
 def home():
     return jsonify({"message": "Medical Scribe API Running"})
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    data = request.json
+    transcript = data.get("transcript", "")
+    medicalHistoryFiles = data.get("medicalHistoryFiles", [])
+
+    # Import lsit from drug_interactions_list.json
+    with open(os.path.join(os.path.dirname(__file__), "drug_interactions_list.json")) as f:
+        drug_interactions = json.load(f)
 
 @app.route("/generate-note", methods=["POST"])
 def generate_note():
