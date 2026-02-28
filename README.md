@@ -189,18 +189,6 @@ Ensure `flask-cors` is installed and enabled in `app.py`.
 
 ---
 
-# 🔮 Future Improvements
-
-- OpenAI API integration
-- Real medical entity extraction
-- Drug interaction checking
-- Authentication system (JWT)
-- Database integration (PostgreSQL)
-- Docker support
-- Production deployment
-
----
-
 # 👨‍💻 Hackathon Project
 
 Built for ACM TrojanHacks 2026.
