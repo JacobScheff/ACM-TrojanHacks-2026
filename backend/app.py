@@ -18,26 +18,22 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
 whisperModel = whisper.load_model("small", device="cpu")
 
-# @app.route("/")
-# def home():
-#     return jsonify({"message": "Medical Scribe API Running"})
+def getMimeType(filename):
+    ext = filename.split(".")[-1].lower()
+    if ext == "pdf":
+        return "application/pdf"
+    elif ext in ["jpg", "jpeg"]:
+        return "image/jpeg"
+    elif ext == "png":
+        return "image/png"
+    else:
+        return "application/octet-stream"
 
-# def getMimeType(filename):
-#     ext = filename.split(".")[-1].lower()
-#     if ext == "pdf":
-#         return "application/pdf"
-#     elif ext in ["jpg", "jpeg"]:
-#         return "image/jpeg"
-#     elif ext == "png":
-#         return "image/png"
-#     else:
-#         return "application/octet-stream"
-
-# @app.route("/analyze", methods=["POST"])
-# def analyze():
-#     data = request.json
-#     transcript = data.get("transcript", "")
-#     medicalHistoryFiles = data.get("medicalHistoryFiles", [])
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    data = request.json
+    transcript = data.get("transcript", "")
+    medicalHistoryFiles = data.get("medicalHistoryFiles", [])
 
 #     # TODO! Delete this
 #     with open(os.path.join(os.path.dirname(__file__), "sampleTranscript.txt")) as f:
@@ -116,50 +112,10 @@ whisperModel = whisper.load_model("small", device="cpu")
         "flagged": flagged
     })
 
-# @app.route("/generate-note", methods=["POST"])
-# def generate_note():
-#     data = request.json
-#     transcript = data.get("transcript", "")
-# # @app.route("/generate-note", methods=["POST"])
-# # def generate_note():
-# #     data = request.json
-# #     transcript = data.get("transcript", "")
-
-# #     return jsonify({
-# #         "soap_note": f"S: {transcript}\nO: ...\nA: ...\nP: ...",
-# #         "confidence": 0.85,
-# #         "warnings": ["Missing vitals"]
-# #     })
-
-# #######################################################################################
-
-# @app.before_request
-# def handle_options():
-#     if request.method == "OPTIONS":
-#         return '', 200
-
-# @app.route("/transcribe", methods=["POST", "OPTIONS"])
-# def transcribe_audio():
-#     print("FILES:", request.files)
-#     if "audio" not in request.files:
-#         return jsonify({"error": "No audio file received"}), 400
-
-#     audio_file = request.files["audio"]
-#     audio_file.save("temp_audio.webm")
-
-#     transcript = "Patient reports chest pain for 2 days."
-
-#     return jsonify({
-#         "transcript": transcript
-#     })
-
-# if __name__ == "__main__":
-#     app.run(debug=True, port=5000)
-#     # app.run(host="0.0.0.0", port=5000, debug=True)
-
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        return '', 200
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe_audio():
