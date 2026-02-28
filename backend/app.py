@@ -51,8 +51,8 @@ def analyze():
 
     # Summarize the transcript
     summaryResponse = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents="Summarize the transcript by removing any unnecessary words and details, keep only the important medical information, such as the patient's core complains and issues.\n\n---\n\n" + transcript
+        model="gemma-3-27b-it",
+        contents="Summarize the transcript by removing any unnecessary words and details, keep only the important medical information, such as the patient's core complaints and issues. Focus on putting it in the form of notes that the doctor would make after the conversation.\n\n---\n\n" + transcript
     )
     summary = summaryResponse.text
 
@@ -72,30 +72,39 @@ def analyze():
     thoughtsContent.extend(fileContents)
     
     thoughtsResponse = client.models.generate_content(
-        model="gemini-3-flash-preview",
+        model="gemma-3-27b-it",
         contents=thoughtsContent
     )
     thoughts = thoughtsResponse.text
 
     # Critique the doctor
     critiqueContent = [
-        "Critique the doctor's approach to the patient's case. What did they do well? What could they have done better? Be brutally honest and critical. Don't worry about being nice, just be accurate and truthful. If you think the doctor made a mistake, say what it is and how it could have been done better.\n\n---\n\n" + transcript
+        "Critique the doctor's response to the patient. This doesn't mean questioning their approach, but rather their conclusions. Did they miss anything important? Did they make any mistakes? Did they fail to account for other plausible explanations or diagnoses? Did they prescribe the correct medication if necessary? Or did they fail to prescribe necessary medication or did they prescribe the wrong medication? Is anything they said just incorrect, or maybe only partially incorrect> Don't forget to take into account the patient's medical history. Be as detailed as possible in your critique, and make sure to specifically list every single thing the doctor missed, and what they shoud have done instead. Attached is the transcript, the patient's medical history, and a list of drug interactions to help you with your critique.\n\n---\n\n" + transcript + "\n\n---\n\nDrug Interactions:\n" + drug_interactions
     ]
     critiqueContent.extend(fileContents)
-    # critiqueContent.append(
+    critiqueResponse = client.models.generate_content(
+        model="gemma-3-27b-it",
+        contents=critiqueContent
+    )
+    critique = critiqueResponse.text
+
+    # List all important flags in a formatted, list manner with priorities (high, medium, low) based on how important they are for the doctor to address immediately. For example, if the doctor missed a critical diagnosis that could be fatal if not treated immediately, that would be a high priority flag. If the doctor missed a less critical diagnosis that still needs to be addressed but is not immediately life-threatening, that would be a medium priority flag. If the doctor made a minor mistake that does not have a significant impact on the patient's health, that would be a low priority flag.
+    flagsContent = [
+        "List all important flags in a formatted, list manner with priorities (high, medium, low) based on how important they are for the doctor to address immediately. Use the format: [(priority, flag details), (priority, flag details)]. Flag details is what will be displayed on the Ui for the doctor to read, so keep them short but detailed. Priority should only be just low, medium, or high. For example, if the doctor missed a critical diagnosis that could be fatal if not treated immediately, that would be a high priority flag. If the doctor missed a less critical diagnosis that still needs to be addressed but is not immediately life-threatening, that would be a medium priority flag. If the doctor made a minor mistake that does not have a significant impact on the patient's health, that would be a low priority flag. Remember, output it in the form of an array, and do not say anything else, not even a \"here is the list of flags:\" or a \"```json\". Attached is the transcript, the patient's medical history, and a list of drug interactions to help you with your analysis.\n\n---\n\n" + transcript + "\n\n---\n\nDrug Interactions:\n" + drug_interactions
+    ]
+    flagsContent.extend(fileContents)
+    flagsResponse = client.models.generate_content(
+        model="gemma-3-27b-it",
+        contents=flagsContent
+    )
+    flagged = flagsResponse.text
     
     return jsonify({
         "summary": summary,
         "thoughts": thoughts,
+        "critique": critique,
+        "flagged": flagged
     })
-
-# fetch('http://127.0.0.1:5000/analyze', {
-#   method: 'POST',
-#   headers: { 'Content-Type': 'application/json' },
-#   body: JSON.stringify({ transcript: 'Hello! This is a sentence. This is another word. I am an unncessessary sentence!' })
-# })
-# .then(response => response.json())
-# .then(data => console.log(data));
 
 @app.route("/generate-note", methods=["POST"])
 def generate_note():
