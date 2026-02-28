@@ -1,0 +1,177 @@
+[
+    {
+        "object_drug": "Amiodarone (Cordarone®)",
+        "precipitant_drugs": ["Levofloxacin (Levaquin®)", "Gemifloxacin (Factive®)", "Moxifloxacin (Avelox®)", "Ofloxacin (Floxin®)", "Ciprofloxacin (Cipro®)"],
+        "effect": "Increased risk of TdP and/or QTc prolongation on ECG",
+        "mechanism": "Concomitant blockade of cardiac potassium channels",
+        "related_drugs": ["Azithromycin (Zithromax®)", "Clarithromycin (Biaxin®)", "Erythromycin (E-Mycin®)", "Telithromycin (Ketek®)"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Alternative antimicrobials include penicillins and cephalosporins."
+        ]
+    },
+    {
+        "object_drug": "Carbamazepine (Tegretol®)",
+        "precipitant_drugs": ["Clarithromycin (Biaxin®)", "Erythromycin (E-Mycin®)", "Telithromycin (Ketek®)"],
+        "effect": "Increased carbamazepine concentrations and risk of carbamazepine toxicity",
+        "mechanism": "Inhibition of carbamazepine metabolism by CYP3A4",
+        "related_drugs": ["Azithromycin (Zithromax®) does not appear to inhibit CYP3A4"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Consider Alternatives: Consider alternative antimicrobials (e.g., azithromycin, quinolones, 2nd/3rd generation cephalosporins, penicillin).",
+            "Monitor: Monitor carbamazepine concentrations and consider temporary downward adjustment of dosage (30-50%). Warn patients about symptoms of toxicity."
+        ]
+    },
+    {
+        "object_drug": "Digoxin (Lanoxin®)",
+        "precipitant_drugs": ["Clarithromycin (Biaxin®)", "Erythromycin (E-Mycin®)"],
+        "effect": "Increased digoxin concentrations and risk of digoxin toxicity",
+        "mechanism": "Inhibition of digoxin transport by P-glycoprotein resulting in reduced elimination",
+        "related_drugs": ["Isolated reports of digoxin toxicity associated with azithromycin (Zithromax®)"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Consider Alternatives: Use antimicrobials that do not inhibit P-glycoprotein (e.g., cephalosporins, penicillin, quinolones).",
+            "Monitor: Evaluate for toxicity (nausea, visual changes, arrhythmias). Downward dosage adjustments may be needed."
+        ]
+    },
+    {
+        "object_drug": "Digoxin (Lanoxin®)",
+        "precipitant_drugs": ["Itraconazole (Sporanox®)", "Ketoconazole (Nizoral®)", "Posaconazole (Noxafil®)"],
+        "effect": "Increased digoxin concentrations and risk of digoxin toxicity",
+        "mechanism": "Inhibition of digoxin transport by P-glycoprotein",
+        "related_drugs": ["Voriconazole (Vfend®) and terbinafine (Lamisil®) do not appear to inhibit P-glycoprotein"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Consider Alternatives: Use voriconazole or terbinafine.",
+            "Monitor: Monitor closely for digoxin toxicity with downward dosage adjustments as necessary."
+        ]
+    },
+    {
+        "object_drug": "Simvastatin",
+        "precipitant_drugs": ["Amiodarone (Cordarone®)"],
+        "effect": "Increased simvastatin concentrations and risk of myopathy/rhabdomyolysis",
+        "mechanism": "Inhibition of simvastatin metabolism by CYP3A4",
+        "related_drugs": ["Atorvastatin (Lipitor®) has lower risk; Fluvastatin, Rosuvastatin, and Pravastatin are not metabolized by CYP3A4"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Statin alternatives include fluvastatin, rosuvastatin, or pravastatin.",
+            "Monitor: Simvastatin dose should not exceed 20 mg/day if used with amiodarone. Monitor for muscle pain or dark urine."
+        ]
+    },
+    {
+        "object_drug": "Statins (Simvastatin, Lovastatin)",
+        "precipitant_drugs": ["Itraconazole", "Ketoconazole", "Posaconazole", "Voriconazole", "Fluconazole"],
+        "effect": "Increased statin concentrations and risk of myopathy/rhabdomyolysis",
+        "mechanism": "Inhibition of statin metabolism by CYP3A4",
+        "related_drugs": ["Terbinafine does not inhibit CYP3A4", "Fluvastatin, Rosuvastatin, Pravastatin are not metabolized by CYP3A4"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Temporarily Hold Statin: Hold therapy during short-term azole use (e.g., 2 weeks).",
+            "Consider Alternatives: Use terbinafine or non-CYP3A4 statins."
+        ]
+    },
+    {
+        "object_drug": "Tamoxifen (Nolvadex®)",
+        "precipitant_drugs": ["Bupropion (Wellbutrin®)", "Duloxetine (Cymbalta®)", "Fluoxetine (Prozac®)", "Paroxetine (Paxil®)"],
+        "effect": "Decreased clinical effectiveness of tamoxifen",
+        "mechanism": "Inhibition of tamoxifen activation to its active metabolite by CYP2D6",
+        "related_drugs": ["Citalopram, Sertraline are weak inhibitors; Venlafaxine does not significantly inhibit CYP2D6"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Consider Alternatives: Use citalopram, desvenlafaxine, escitalopram, fluvoxamine, sertraline, or venlafaxine."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Amiodarone (Cordarone®)"],
+        "effect": "Increased warfarin concentrations and bleeding risk",
+        "mechanism": "Inhibition of warfarin metabolism by CYP2C9",
+        "related_drugs": ["N/A"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Monitor: Increase INR monitoring frequency. Dosage reduction of 30-50% is often required."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Fluconazole", "Miconazole", "Voriconazole"],
+        "effect": "Increased warfarin concentrations and bleeding risk",
+        "mechanism": "Inhibition of warfarin metabolism by CYP2C9",
+        "related_drugs": ["Itraconazole, Ketoconazole, Terbinafine do not appear to inhibit CYP2C9"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Use Itraconazole, Ketoconazole, or Terbinafine.",
+            "Monitor: Carefully monitor INR if an interacting azole is started or stopped."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Carbamazepine (Tegretol®)"],
+        "effect": "Decreased warfarin concentrations and effect",
+        "mechanism": "Induction of warfarin metabolism",
+        "related_drugs": ["Barbiturates, Phenytoin, Primidone also reduce effect"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Monitor: Monitor for altered warfarin response. Induction is gradual (several weeks)."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Gemfibrozil (Lopid®)", "Fenofibrate (Tricor®)"],
+        "effect": "Increased warfarin effect and bleeding risk",
+        "mechanism": "Not established (possible CYP2C9 inhibition)",
+        "related_drugs": ["Niacin is not known to interact"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Atorvastatin or Pravastatin are safer for lipid management.",
+            "Monitor: Monitor INR closely when starting or stopping fibrates."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["NSAIDs"],
+        "effect": "Additive risk of bleeding",
+        "mechanism": "Antiplatelet effects and GI erosion from NSAIDs combined with anticoagulation",
+        "related_drugs": ["Acetaminophen (limit to 2g/day) or opioids are preferred"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Use acetaminophen or opioid analgesics.",
+            "Monitor: Monitor for GI bleeding signs if used together."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Fluvastatin", "Lovastatin", "Rosuvastatin", "Simvastatin"],
+        "effect": "Increased warfarin concentrations and bleeding risk",
+        "mechanism": "Proposed inhibition of CYP2C9",
+        "related_drugs": ["Atorvastatin and Pravastatin are not known to interact"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Consider Alternatives: Use Atorvastatin or Pravastatin.",
+            "Monitor: Monitor INR when statins are started or changed."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Sulfamethoxazole/trimethoprim (Bactrim®)", "Metronidazole (Flagyl®)"],
+        "effect": "Increased warfarin concentrations and bleeding risk",
+        "mechanism": "Inhibition of warfarin metabolism by CYP2C9",
+        "related_drugs": ["Penicillins and Cephalosporins are preferred alternatives"],
+        "management_category": "Usually Avoid",
+        "management_strategies": [
+            "Consider Alternatives: Use penicillins or cephalosporins.",
+            "Monitor: Temporarily reduce warfarin dose and monitor INR closely."
+        ]
+    },
+    {
+        "object_drug": "Warfarin (Coumadin®)",
+        "precipitant_drugs": ["Levothyroxine", "Liothyronine", "Liotrix", "Thyroid USP"],
+        "effect": "Increased bleeding risk",
+        "mechanism": "Accelerated depletion of vitamin K-dependent clotting factors",
+        "related_drugs": ["N/A"],
+        "management_category": "Take Precautions",
+        "management_strategies": [
+            "Monitor: Frequent INR monitoring (e.g., Day 4, Day 7, weekly) when thyroid therapy starts."
+        ]
+    }
+]
