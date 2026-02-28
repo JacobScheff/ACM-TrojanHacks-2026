@@ -16,7 +16,7 @@ CORS(app)
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
-whisperModel = whisper.load_model("small", device="cpu")
+whisperModel = whisper.load_model("base", device="cpu")
 
 def getMimeType(filename):
     ext = filename.split(".")[-1].lower()
