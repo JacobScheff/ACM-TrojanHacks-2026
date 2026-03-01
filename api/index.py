@@ -156,7 +156,7 @@ def transcribe_audio():
 
     return jsonify({"transcript": transcript})
 
-@app.route("/chat", methods=["POST"])
+@app.route("/api/chat", methods=["POST"])
 def chat():
     """
     Lightweight chat endpoint that consumes analysis directly (no session_id).
