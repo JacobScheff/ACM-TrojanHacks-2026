@@ -1,3 +1,7 @@
-flask
-flask-cors
-python-dotenv
+Flask==2.3.3
+google-genai==1.64.0
+pandas==2.2.2
+python-dotenv==1.0.0
+Flask-Cors==4.0.0
+flask-socketio==6.4.0      # only if you plan to add live audio sockets
+eventlet==0.33.3           # alternative SocketIO worker for production prototyping
