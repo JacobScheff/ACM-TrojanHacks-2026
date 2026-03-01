@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 5000
 
 # Command to run the application using Gunicorn
-CMD["gunicorn", "-b", "0.0.0.0:5000", "--timeout", "480", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "--timeout", "480", "app:app"]
