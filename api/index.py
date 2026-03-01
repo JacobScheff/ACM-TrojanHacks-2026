@@ -133,7 +133,9 @@ def handle_options():
         return '', 200
 
 def _build_transcript_with_speakers(segments, labels=("Doctor", "Patient")):
-    """Turn Whisper segments into a transcript with alternating speaker labels."""
+    """Turn Whisper segments into a transcript with alternating speaker labels.
+    Each speaker turn is on its own line(s) with a small gap between turns.
+    """
     if not segments:
         return ""
     lines = []
@@ -143,6 +145,7 @@ def _build_transcript_with_speakers(segments, labels=("Doctor", "Patient")):
             continue
         speaker = labels[i % len(labels)]
         lines.append(f"{speaker}: {text}")
+    # One blank line between speaker turns for a small visual gap
     return "\n\n".join(lines)
 
 

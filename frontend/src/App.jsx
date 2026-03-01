@@ -278,15 +278,19 @@ export default function App() {
             
             <h2 className="font-semibold text-lg mb-4">Transcript</h2>
               <div className="space-y-3 text-sm">
-                <div className="space-y-3 text-sm">
-                  {transcript ? (
-                    <div>{transcript}</div>
-                  ) : (
-                    <div className="text-gray-400">
-                      Transcript will appear here...
-                    </div>
-                  )}
-                </div>
+                {transcript ? (
+                  <div className="leading-relaxed">
+                    {transcript.split(/\n\n+/).map((block, i) => (
+                      <div key={i} className="mb-3 last:mb-0 whitespace-pre-line">
+                        {block}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-400">
+                    Transcript will appear here...
+                  </div>
+                )}
               </div>
           </div>
           
