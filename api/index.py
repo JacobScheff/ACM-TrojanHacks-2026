@@ -155,37 +155,28 @@ def transcribe_audio():
 @app.route("/chat", methods=["POST"])
 def chat():
     """
-    New chat endpoint that does NOT require session_id.
-    POST body accepted fields (all optional except doctor_message):
-      - doctor_message: str  (the doctor's question)
-      - transcript: str      (full visit transcript or empty)
-      - thoughts: str        (analysis/thoughts from /analyze)
-      - critiques: str       (critique text from /analyze)
-      - patient_record: dict (full patient record JSON)
-      - patient_id: str      (optional id to load patient_record via epic_dummy)
-      - history: [str]       (optional list of prior chat lines for context)
+    Lightweight chat endpoint that consumes analysis directly (no session_id).
+    Input JSON fields (recommended):
+      - doctor_message: str
+      - transcript: str         # full visit transcript (from /api/analyze)
+      - thoughts: str           # analysis/thoughts (from /api/analyze)
+      - critiques: str          # critique text (from /api/analyze)
+      - patient_record: dict    # optional patient record
+      - history: [str]          # optional small list of prior chat lines
     Response:
-      { "response": <parsed model JSON or error structure> }
+      { "response": <parsed model JSON or error object> }
     """
     body = request.get_json() or {}
 
+    # Read incoming fields
     doctor_msg = (body.get("doctor_message") or "").strip()
-    transcript = body.get("transcript", "").strip()
-    thoughts = body.get("thoughts", "").strip()
-    critiques = body.get("critiques", "").strip() or body.get("critiques_text", "").strip()
+    transcript = (body.get("transcript") or "").strip()
+    thoughts = (body.get("thoughts") or "").strip()
+    critiques = (body.get("critiques") or "").strip()
     patient_record = body.get("patient_record")
-    patient_id = body.get("patient_id")
     history_list = body.get("history", []) or []
 
-    # Optionally load patient record by id (if provided and not present)
-    if patient_id and not patient_record:
-        try:
-            from .epic_dummy import load_patient_record
-            patient_record = load_patient_record(patient_id)
-        except Exception:
-            patient_record = None
-
-    # Build system instruction + schema (same as before)
+    # Build system instruction and schema (same idea as before)
     system_prompt = (
         "You are a concise clinical assistant. Use the patient history and any provided analysis. "
         "Answer the doctor's question directly. Return JSON EXACTLY matching the schema provided. "
@@ -201,81 +192,56 @@ def chat():
         "flags": [{"type":"drug-interaction|allergy|missing-data|implausible-dx","severity":"low|moderate|high","details":""}]
     }
 
-    # Compose the model contents
+    # Compose contents to send to the model
     contents = []
     contents.append(f"SYSTEM: {system_prompt}\nSCHEMA: {json.dumps(schema)}")
 
     if patient_record:
-        contents.append(f"PATIENT_RECORD: {json.dumps(patient_record)}")
-
-    # Inject analysis blobs if present (these come directly from /analyze)
-    # Keep them short/truncated to avoid huge prompts
-    def _safe_trunc(s, limit=2000):
-        if not s:
-            return ""
-        s = s if isinstance(s, str) else json.dumps(s)
-        return s if len(s) <= limit else s[:limit] + " ...[truncated]"
+        try:
+            contents.append(f"PATIENT_RECORD: {json.dumps(patient_record)}")
+        except Exception:
+            contents.append(f"PATIENT_RECORD: {str(patient_record)}")
 
     if transcript:
-        contents.append(f"TRANSCRIPT: {_safe_trunc(transcript, limit=3000)}")
+        contents.append(f"TRANSCRIPT: {transcript}")
     if thoughts:
-        contents.append(f"ANALYSIS_THOUGHTS: {_safe_trunc(thoughts)}")
+        contents.append(f"ANALYSIS_THOUGHTS: {thoughts}")
     if critiques:
-        contents.append(f"ANALYSIS_CRITIQUES: {_safe_trunc(critiques)}")
+        contents.append(f"ANALYSIS_CRITIQUES: {critiques}")
 
-    # Optional small chat history (list of strings)
     if isinstance(history_list, list) and history_list:
         history_text = "\n".join(history_list[-8:])
-        contents.append(f"CHAT_HISTORY:\n{_safe_trunc(history_text, limit=1500)}")
+        contents.append(f"CHAT_HISTORY:\n{history_text}")
 
-    # Doctor question (required for this endpoint)
     if doctor_msg:
         contents.append(f"DOCTOR_QUESTION: {doctor_msg}")
     else:
-        # If doctor didn't send a message, prompt the model for a brief summary/recommendation
         contents.append("DOCTOR_QUESTION: Please summarize the main concerns and recommend immediate next steps.")
 
     # Call the model
     raw = ""
     try:
         resp = client.models.generate_content(
-            model="gemma-3-27b-it",  # or whichever model you prefer
+            model="gemma-3-27b-it",  
             contents=contents
         )
         raw = getattr(resp, "text", None) or str(resp)
-        parsed, parse_err = sanitize_and_parse_json(raw)
-        if parsed is None:
-            parsed = {"error": "model_error_or_parse_fail", "message": parse_err, "raw": raw}
+
+        # Try to parse JSON directly. If fails, return raw for debugging in response.
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            # sometimes models wrap in ```json ... ```
+            # but per request we'll not attempt complex sanitization here.
+            parsed = {"error": "parse_fail", "message": "failed to json.loads model output", "raw": raw}
+
     except Exception as e:
-        # If model call fails, return structured error
-        err_str = str(e)
-        parsed = {"error": "model_request_failed", "message": err_str}
-        # include raw if we have it
+        # Model call failed — return structured error (no crash)
+        parsed = {"error": "model_request_failed", "message": str(e)}
         if raw:
             parsed["raw"] = raw
 
-    # Optional: run drug-interaction checks if model recommended prescriptions and patient_record exists
-    try:
-        rec_rx = parsed.get("recommended_prescriptions", []) if isinstance(parsed, dict) else []
-        patient_meds = patient_record.get("medications", []) if patient_record else []
-        if rec_rx and patient_meds:
-            try:
-                from .drugcheck import check_drug_interactions
-                extra_flags = []
-                for rx in rec_rx:
-                    drug = rx.get("drug") if isinstance(rx, dict) else None
-                    if drug:
-                        extra_flags.extend(check_drug_interactions(patient_meds, drug))
-                if extra_flags:
-                    parsed_flags = parsed.get("flags", []) if isinstance(parsed, dict) else []
-                    parsed["flags"] = parsed_flags + extra_flags
-            except Exception:
-                # swallow drugcheck errors (do not fail chat)
-                pass
-    except Exception:
-        pass
-
-    # Return the model parsed response (no session_id)
+    # Return result (no session state saved)
     return jsonify({"response": parsed})
 
 if __name__ == "__main__":
