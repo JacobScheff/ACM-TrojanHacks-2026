@@ -159,94 +159,80 @@ def transcribe_audio():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     """
-    Lightweight chat endpoint that consumes analysis directly (no session_id).
-    Input JSON fields (recommended):
+    Chat endpoint: doctor asks questions; model responds in plain text.
+    Input JSON:
       - doctor_message: str
-      - transcript: str         # full visit transcript (from /api/analyze)
-      - thoughts: str           # analysis/thoughts (from /api/analyze)
-      - critiques: str          # critique text (from /api/analyze)
-      - patient_record: dict    # optional patient record
-      - history: [str]          # optional small list of prior chat lines
-    Response:
-      { "response": <parsed model JSON or error object> }
+      - transcript: str
+      - thoughts: str (from /api/analyze)
+      - critiques: str (from /api/analyze)
+      - patient_data: list of { "filename": str, "data": base64 str } (uploaded medical history files)
+      - history: [str] optional prior chat lines
+    Response: { "response": str }  (plain text, not JSON)
     """
     body = request.get_json() or {}
 
-    # Read incoming fields
     doctor_msg = (body.get("doctor_message") or "").strip()
     transcript = (body.get("transcript") or "").strip()
     thoughts = (body.get("thoughts") or "").strip()
     critiques = (body.get("critiques") or "").strip()
-    patient_record = body.get("patient_record")
+    patient_data = body.get("patient_data") or body.get("medicalHistoryFiles") or []
     history_list = body.get("history", []) or []
 
-    # Build system instruction and schema (same idea as before)
+    # Parse uploaded files (patient_data) into Parts for the model
+    file_parts = []
+    for file in patient_data:
+        raw = file.get("data")
+        if raw is None:
+            continue
+        if isinstance(raw, str):
+            raw = base64.b64decode(raw)
+        file_parts.append(
+            types.Part.from_bytes(
+                data=raw,
+                mime_type=getMimeType(file.get("filename") or "") or "application/octet-stream",
+            )
+        )
+
+    # Build a single prompt with \n\n---\n\n between sections; respond in plain text only
     system_prompt = (
-        "You are a concise clinical assistant. Use the patient history and any provided analysis. "
-        "Answer the doctor's question directly. Return JSON EXACTLY matching the schema provided. "
-        "If you suggest medications or orders, include rationale and confidence_percent."
+        "You are a concise clinical assistant. Use the patient's medical history (including any attached documents) "
+        "and the provided transcript/analysis. Answer the doctor's question in plain text only. "
+        "Do not output JSON. If you suggest medications or orders, include rationale."
     )
 
-    schema = {
-        "answer": "string concise answer to doctor's question",
-        "summary": ["... up to 3 bullets"],
-        "differentials": [{"name":"", "confidence_percent":0, "rationale":""}],
-        "recommended_actions": [{"action_type":"note|order|test|refer","details":""}],
-        "recommended_prescriptions": [{"drug":"", "dose":"", "rationale":""}],
-        "flags": [{"type":"drug-interaction|allergy|missing-data|implausible-dx","severity":"low|moderate|high","details":""}]
-    }
-
-    # Compose contents to send to the model
-    contents = []
-    contents.append(f"SYSTEM: {system_prompt}\nSCHEMA: {json.dumps(schema)}")
-
-    if patient_record:
-        try:
-            contents.append(f"PATIENT_RECORD: {json.dumps(patient_record)}")
-        except Exception:
-            contents.append(f"PATIENT_RECORD: {str(patient_record)}")
+    sections = [f"System:\n{system_prompt}"]
 
     if transcript:
-        contents.append(f"TRANSCRIPT: {transcript}")
+        sections.append(f"Transcript:\n{transcript}")
     if thoughts:
-        contents.append(f"ANALYSIS_THOUGHTS: {thoughts}")
+        sections.append(f"Analysis / clinical thoughts:\n{thoughts}")
     if critiques:
-        contents.append(f"ANALYSIS_CRITIQUES: {critiques}")
+        sections.append(f"Critique:\n{critiques}")
 
     if isinstance(history_list, list) and history_list:
         history_text = "\n".join(history_list[-8:])
-        contents.append(f"CHAT_HISTORY:\n{history_text}")
+        sections.append(f"Chat history:\n{history_text}")
 
     if doctor_msg:
-        contents.append(f"DOCTOR_QUESTION: {doctor_msg}")
+        sections.append(f"Doctor's question:\n{doctor_msg}")
     else:
-        contents.append("DOCTOR_QUESTION: Please summarize the main concerns and recommend immediate next steps.")
+        sections.append("Doctor's question: Please summarize the main concerns and recommend immediate next steps.")
 
-    # Call the model
-    raw = ""
+    prompt_text = "\n\n---\n\n".join(sections)
+
+    # Contents: one text block then attached file parts (patient documents)
+    contents = [prompt_text]
+    contents.extend(file_parts)
+
     try:
         resp = client.models.generate_content(
-            model="gemma-3-27b-it",  
-            contents=contents
+            model="gemma-3-27b-it",
+            contents=contents,
         )
-        raw = getattr(resp, "text", None) or str(resp)
-
-        # Try to parse JSON directly. If fails, return raw for debugging in response.
-        try:
-            parsed = json.loads(raw)
-        except Exception:
-            # sometimes models wrap in ```json ... ```
-            # but per request we'll not attempt complex sanitization here.
-            parsed = {"error": "parse_fail", "message": "failed to json.loads model output", "raw": raw}
-
+        text = getattr(resp, "text", None) or str(resp)
+        return jsonify({"response": text})
     except Exception as e:
-        # Model call failed — return structured error (no crash)
-        parsed = {"error": "model_request_failed", "message": str(e)}
-        if raw:
-            parsed["raw"] = raw
-
-    # Return result (no session state saved)
-    return jsonify({"response": parsed})
+        return jsonify({"response": f"Error: {e}"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

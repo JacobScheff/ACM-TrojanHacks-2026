@@ -15,6 +15,10 @@ export default function App() {
   const [medicalHistoryFiles, setMedicalHistoryFiles] = useState([]);
   const [dismissedFlagIndices, setDismissedFlagIndices] = useState(new Set());
   const [exitingFlagIndices, setExitingFlagIndices] = useState(new Set());
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   /** Parse backend flagged string (JSON or Python-style tuples) into { priority, details }[] */
   const parseFlagged = (flagged) => {
@@ -176,12 +180,71 @@ export default function App() {
     setMedicalHistoryFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const sendChatMessage = async () => {
+    const msg = chatInput.trim();
+    if (!msg || chatLoading) return;
+
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "doctor", text: msg }]);
+    setChatLoading(true);
+
+    try {
+      const history = chatMessages.flatMap((m) =>
+        m.role === "doctor" ? [`Doctor: ${m.text}`] : [`AI: ${m.text}`]
+      );
+
+      const patientDataPayload = await Promise.all(
+        medicalHistoryFiles.map(readFileAsBase64)
+      );
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          doctor_message: msg,
+          transcript: transcript || "",
+          thoughts: analysis?.thoughts || "",
+          critiques: analysis?.critique || "",
+          patient_data: patientDataPayload,
+          history,
+        }),
+      });
+
+      const data = await res.json();
+      const answer =
+        typeof data.response === "string"
+          ? data.response
+          : data.response?.answer ?? (data.response?.error ? `Error: ${data.response.message ?? data.response.error}` : String(data.response ?? "No response"));
+
+      setChatMessages((prev) => [...prev, { role: "ai", text: answer }]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "ai", text: `Error: ${err.message || "Request failed"}` },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const chatEndRef = useRef(null);
+  useEffect(() => {
+    if (chatOpen && chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [chatOpen, chatMessages]);
+
   return (
     <div className="min-h-screen bg-gray-100">
 
       {/* Top Navbar */}
-      <div className="bg-slate-800 text-white px-6 py-4">
+      <div className="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
         <div className="font-bold text-lg">MedScribe AI Verifier</div>
+        <button
+          type="button"
+          onClick={() => setChatOpen(true)}
+          className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-sm font-medium transition-colors"
+        >
+          Chat with AI
+        </button>
       </div>
 
       {/* Main Content */}
@@ -396,6 +459,98 @@ export default function App() {
         </div>
 
       </div>
+
+      {/* Chat tab — slides in from the right */}
+      <div
+        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[28rem] max-w-[100vw] bg-[#F2F2F7] flex flex-col shadow-2xl transition-transform duration-300 ease-out ${
+          chatOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Chat with AI"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0">
+          <button
+            type="button"
+            onClick={() => setChatOpen(false)}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Close chat"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h3 className="font-semibold text-gray-900">Chat with AI</h3>
+        </div>
+
+        {/* Messages — iMessage style */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-2">
+          {chatMessages.length === 0 && (
+            <p className="text-center text-gray-400 text-sm py-8">
+              Ask about this encounter. Transcript and analysis are sent as context.
+            </p>
+          )}
+          {chatMessages.map((m, i) => (
+            <div
+              key={i}
+              className={`flex ${m.role === "doctor" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[85%] px-4 py-2.5 text-[15px] leading-snug whitespace-pre-wrap ${
+                  m.role === "doctor"
+                    ? "bg-[#007AFF] text-white rounded-[18px] rounded-br-[4px]"
+                    : "bg-[#E5E5EA] text-gray-900 rounded-[18px] rounded-bl-[4px]"
+                }`}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {chatLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] px-4 py-2.5 rounded-[18px] rounded-bl-[4px] bg-[#E5E5EA] text-gray-500 text-[15px]">
+                …
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input bar — iMessage style */}
+        <div className="p-3 pb-6 bg-[#F2F2F7] shrink-0">
+          <div className="flex items-end gap-2 bg-white rounded-[20px] pl-4 pr-2 py-2 min-h-[44px] border border-gray-200">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendChatMessage()}
+              placeholder="Message"
+              className="flex-1 min-w-0 bg-transparent text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none py-1.5"
+            />
+            <button
+              type="button"
+              onClick={sendChatMessage}
+              disabled={chatLoading || !chatInput.trim()}
+              className="shrink-0 w-8 h-8 rounded-full bg-[#007AFF] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed active:opacity-80 transition-opacity"
+              aria-label="Send"
+            >
+              <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Backdrop when chat is open (optional tap to close on mobile) */}
+      <div
+        className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-300 ${
+          chatOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setChatOpen(false)}
+        aria-hidden="true"
+      />
     </div>
   );
 }
