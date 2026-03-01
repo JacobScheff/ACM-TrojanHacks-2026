@@ -37,6 +37,8 @@ def getMimeType(filename):
         return "image/png"
     else:
         return "application/octet-stream"
+    
+
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -201,15 +203,6 @@ def sanitize_and_parse_json(raw_text: str) -> Tuple[Optional[dict], Optional[str
             
 @app.route("/chat", methods=["POST"])
 def chat():
-    """
-    POST body:
-    {
-      "session_id": "<optional>",
-      "doctor_message": "What's the likely dx?",
-      "patient_id": "12345"  # or patient_record object
-    }
-    Response: model json (summary, differentials, recommended_actions, flags, raw_text(optional))
-    """
     body = request.get_json() or {}
     session_id = body.get("session_id")
     doctor_msg = body.get("doctor_message", "").strip()
