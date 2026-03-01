@@ -536,21 +536,12 @@ export default function App() {
               </>
             )}
 
-            {!loadingAnalysis && (!analysis || flaggedList.length === 0) && (
-              <>
-                <div className="bg-gray-50 border-l-4 border-gray-400 p-3 rounded-r-md">
-                  <strong className="text-gray-900">Low Confidence</strong>
-                  <p className="mt-1 text-gray-600">Missing objective vitals.</p>
-                </div>
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-md">
-                  <strong className="text-gray-900">Clinical Consistency</strong>
-                  <p className="mt-1 text-gray-600">Chest pain not fully evaluated.</p>
-                </div>
-                <div className="bg-gray-50 border-l-4 border-gray-400 p-3 rounded-r-md">
-                  <strong className="text-gray-900">EHR Integration</strong>
-                  <p className="mt-1 text-gray-600">Status: Pending Signature</p>
-                </div>
-              </>
+            {!loadingAnalysis && !analysis && (
+              <p className="text-gray-400 py-2">Run analysis to see verifier flags.</p>
+            )}
+
+            {!loadingAnalysis && analysis && flaggedList.length === 0 && (
+              <p className="text-gray-500 py-2">No verifier flags detected.</p>
             )}
           </div>
         </div>
