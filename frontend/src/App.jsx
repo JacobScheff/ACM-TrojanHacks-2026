@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 
 export default function App() {
@@ -13,6 +13,8 @@ export default function App() {
   const [activeAnalysisTab, setActiveAnalysisTab] = useState("summary");
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [medicalHistoryFiles, setMedicalHistoryFiles] = useState([]);
+  const [dismissedFlagIndices, setDismissedFlagIndices] = useState(new Set());
+  const [exitingFlagIndices, setExitingFlagIndices] = useState(new Set());
 
   /** Parse backend flagged string (JSON or Python-style tuples) into { priority, details }[] */
   const parseFlagged = (flagged) => {
@@ -49,6 +51,25 @@ export default function App() {
   };
 
   const flaggedList = analysis?.flagged ? parseFlagged(analysis.flagged) : [];
+
+  useEffect(() => {
+    setDismissedFlagIndices(new Set());
+    setExitingFlagIndices(new Set());
+  }, [analysis]);
+
+  const dismissFlag = (index) => {
+    setExitingFlagIndices((prev) => new Set(prev).add(index));
+  };
+
+  const handleFlagTransitionEnd = (index) => {
+    setExitingFlagIndices((prev) => {
+      if (!prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+    setDismissedFlagIndices((prev) => (prev.has(index) ? prev : new Set(prev).add(index)));
+  };
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -137,7 +158,6 @@ export default function App() {
       });
 
       const data = await res.json();
-      console.log("Analyze result:", data);
       setAnalysis(data);
     } catch (err) {
       console.error("Analyze error:", err);
@@ -160,21 +180,15 @@ export default function App() {
     <div className="min-h-screen bg-gray-100">
 
       {/* Top Navbar */}
-      <div className="bg-slate-800 text-white px-6 py-4 flex justify-between">
+      <div className="bg-slate-800 text-white px-6 py-4">
         <div className="font-bold text-lg">MedScribe AI Verifier</div>
-        <div className="space-x-6">
-          <span>Live Encounter</span>
-          <span>Patient Charts</span>
-          <span>Verified Logs</span>
-          <span>Settings</span>
-        </div>
       </div>
 
       {/* Main Content */}
       <div className="p-6 grid grid-cols-3 gap-6">
 
         {/* LEFT PANEL */}
-        <div className="bg-white rounded-xl shadow p-4">
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col min-h-0 max-h-[calc(100vh-8rem)] overflow-y-auto">
           
           {/* Audio Recording & Transcript */}
           <div className="flex flex-col items-center justify-center space-y-4">
@@ -269,8 +283,8 @@ export default function App() {
 
         {/* CENTER PANEL */}
         
-        <div className="bg-white rounded-xl shadow p-4">
-          <h2 className="font-semibold text-lg mb-4">
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col min-h-0 max-h-[calc(100vh-8rem)]">
+          <h2 className="font-semibold text-lg mb-4 shrink-0">
             AI Analysis
           </h2>
 
@@ -281,7 +295,7 @@ export default function App() {
           {!loadingAnalysis && analysis && (
             <>
               {/* Tabs — Flags moved to right panel */}
-              <div className="flex space-x-6 border-b mb-4">
+              <div className="flex space-x-6 border-b mb-4 shrink-0">
                 {["summary", "thoughts", "critique"].map((tab) => (
                   <button
                     key={tab}
@@ -297,8 +311,8 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Content */}
-              <div className="text-sm whitespace-pre-wrap max-h-[500px] overflow-y-auto">
+              {/* Content — scrollable, does not expand page */}
+              <div className="text-sm whitespace-pre-wrap min-h-0 flex-1 overflow-y-auto">
                 {analysis[activeAnalysisTab]}
               </div>
             </>
@@ -316,12 +330,12 @@ export default function App() {
          
 
         {/* RIGHT PANEL — Verifier & Critical Checks + Flags */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <h2 className="font-semibold text-lg mb-4">
+        <div className="bg-white rounded-xl shadow p-4 flex flex-col min-h-0 max-h-[calc(100vh-8rem)]">
+          <h2 className="font-semibold text-lg mb-4 shrink-0">
             Verifier & Critical Checks
           </h2>
 
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-sm min-h-0 flex-1 overflow-y-auto">
             {loadingAnalysis && (
               <p className="text-gray-500 py-2">Running checks...</p>
             )}
@@ -329,6 +343,8 @@ export default function App() {
             {!loadingAnalysis && flaggedList.length > 0 && (
               <>
                 {flaggedList.map((flag, i) => {
+                  if (dismissedFlagIndices.has(i)) return null;
+                  const isExiting = exitingFlagIndices.has(i);
                   const isHigh = flag.priority === "high";
                   const isMedium = flag.priority === "medium";
                   const bg = isHigh ? "bg-red-50" : isMedium ? "bg-amber-50" : "bg-gray-50";
@@ -337,10 +353,23 @@ export default function App() {
                   return (
                     <div
                       key={i}
-                      className={`${bg} border-l-4 ${border} p-3 rounded-r-md shadow-sm`}
+                      onTransitionEnd={() => isExiting && handleFlagTransitionEnd(i)}
+                      className={`${bg} border-l-4 ${border} rounded-r-md shadow-sm relative pr-8 transition-all duration-300 ease-out overflow-hidden ${
+                        isExiting ? "max-h-0 opacity-0 py-0 my-0 border-0" : "max-h-[300px] p-3"
+                      }`}
                     >
-                      <strong className="text-gray-900">{title}</strong>
-                      <p className="mt-1 text-gray-700 leading-snug">{flag.details}</p>
+                      <button
+                        type="button"
+                        onClick={() => dismissFlag(i)}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-800 hover:bg-black/5 transition-colors"
+                        aria-label="Dismiss flag"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <strong className="text-gray-900 block pr-2">{title}</strong>
+                      <p className="mt-1 text-gray-700 leading-snug pr-2">{flag.details}</p>
                     </div>
                   );
                 })}
