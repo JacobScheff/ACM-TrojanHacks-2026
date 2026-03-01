@@ -33,7 +33,7 @@ export default function App() {
       formData.append("audio", audioBlob, "recording.webm");
 
       try {
-        const res = await fetch("/api/transcribe", {
+        const res = await fetch("http://127.0.0.1:5000/transcribe", {
           method: "POST",
           body: formData,
         });
@@ -71,7 +71,7 @@ export default function App() {
     setAnalysis(null);
 
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetch("http://127.0.0.1:5000/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
