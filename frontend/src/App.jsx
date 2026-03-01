@@ -12,6 +12,7 @@ export default function App() {
   const [analysis, setAnalysis] = useState(null);
   const [activeAnalysisTab, setActiveAnalysisTab] = useState("summary");
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [medicalHistoryFiles, setMedicalHistoryFiles] = useState([]);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -64,6 +65,19 @@ export default function App() {
     }
   };
 
+  const fileInputRef = useRef(null);
+
+  const readFileAsBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(",")[1] || reader.result;
+        resolve({ filename: file.name, data: base64 });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
   const handleAnalyze = async () => {
     if (!transcript) return;
 
@@ -71,25 +85,39 @@ export default function App() {
     setAnalysis(null);
 
     try {
+      const filesPayload = await Promise.all(
+        medicalHistoryFiles.map(readFileAsBase64)
+      );
+
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          transcript: transcript,
-          medicalHistoryFiles: []
+          transcript,
+          medicalHistoryFiles: filesPayload,
         }),
       });
 
       const data = await res.json();
+      console.log("Analyze result:", data);
       setAnalysis(data);
-
     } catch (err) {
       console.error("Analyze error:", err);
     }
 
     setLoadingAnalysis(false);
+  };
+
+  const handleFileChange = (e) => {
+    const chosen = Array.from(e.target.files || []);
+    setMedicalHistoryFiles((prev) => [...prev, ...chosen]);
+    e.target.value = "";
+  };
+
+  const removeMedicalFile = (index) => {
+    setMedicalHistoryFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -149,14 +177,49 @@ export default function App() {
               </div>
           </div>
           
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <button
               onClick={handleAnalyze}
               disabled={!transcript || loadingAnalysis}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
             >
               {loadingAnalysis ? "Analyzing..." : "Analyze Transcript"}
             </button>
+
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border border-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-50"
+              >
+                Upload files (patient medical history)
+              </button>
+              {medicalHistoryFiles.length > 0 && (
+                <ul className="mt-2 text-sm text-gray-600 space-y-1">
+                  {medicalHistoryFiles.map((file, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeMedicalFile(i)}
+                        className="text-red-600 hover:text-red-700 shrink-0"
+                        aria-label="Remove file"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           {/* <div className="mt-6 border-t pt-4">
             <h3 className="font-medium mb-2">Audio</h3>

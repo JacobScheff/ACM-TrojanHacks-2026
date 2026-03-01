@@ -14,6 +14,7 @@ from uuid import uuid4
 from datetime import datetime
 import re
 import json
+import base64
 from typing import Tuple, Optional
 
 app = Flask(__name__)
@@ -62,9 +63,12 @@ def analyze():
 
     fileContents = []
     for file in medicalHistoryFiles:
+        raw = file.get("data")
+        if isinstance(raw, str):
+            raw = base64.b64decode(raw)
         fileContents.append(
             types.Part.from_bytes(
-                data=file["data"],
+                data=raw,
                 mime_type=getMimeType(file["filename"]) if "filename" in file else "application/octet-stream",
             )
         )
