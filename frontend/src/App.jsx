@@ -71,7 +71,7 @@ export default function App() {
     setAnalysis(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/analyze", {
+      const res = await fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
