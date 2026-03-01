@@ -8,6 +8,11 @@ export default function App() {
   const audioChunksRef = useRef([]);
   const [transcript, setTranscript] = useState("");
 
+
+  const [analysis, setAnalysis] = useState(null);
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState("summary");
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
@@ -28,7 +33,7 @@ export default function App() {
       formData.append("audio", audioBlob, "recording.webm");
 
       try {
-        const res = await fetch("http://localhost:5000/transcribe", {
+        const res = await fetch("http://127.0.0.1:5000/transcribe", {
           method: "POST",
           body: formData,
         });
@@ -57,6 +62,34 @@ export default function App() {
     } else {
       startRecording();
     }
+  };
+
+  const handleAnalyze = async () => {
+    if (!transcript) return;
+
+    setLoadingAnalysis(true);
+    setAnalysis(null);
+
+    try {
+      const res = await fetch("http://127.0.0.1:5000/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transcript: transcript,
+          medicalHistoryFiles: []
+        }),
+      });
+
+      const data = await res.json();
+      setAnalysis(data);
+
+    } catch (err) {
+      console.error("Analyze error:", err);
+    }
+
+    setLoadingAnalysis(false);
   };
 
   return (
@@ -116,75 +149,74 @@ export default function App() {
               </div>
           </div>
           
-
+          <div className="mt-4">
+            <button
+              onClick={handleAnalyze}
+              disabled={!transcript || loadingAnalysis}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {loadingAnalysis ? "Analyzing..." : "Analyze Transcript"}
+            </button>
+          </div>
           {/* <div className="mt-6 border-t pt-4">
             <h3 className="font-medium mb-2">Audio</h3>
             <div className="h-16 bg-gray-200 rounded flex items-center justify-center">
               🎙 Audio Waveform Placeholder
             </div>
           </div> */}
+
+
         </div>
 
         {/* CENTER PANEL */}
+        
         <div className="bg-white rounded-xl shadow p-4">
           <h2 className="font-semibold text-lg mb-4">
-            AI-Generated Draft (SOAP)
+            AI Analysis
           </h2>
 
-          {/* Tabs */}
-          <div className="flex space-x-4 border-b mb-4">
-            {["subjective", "objective", "assessment", "plan"].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-2 capitalize ${
-                  activeTab === tab
-                    ? "border-b-2 border-blue-500 text-blue-600"
-                    : "text-gray-500"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          {loadingAnalysis && (
+            <p className="text-gray-500">Running AI analysis...</p>
+          )}
 
-          {/* Content */}
-          <div className="text-sm">
-            {activeTab === "subjective" && (
-              <div>
-                Symptoms: Chest pain for 2 days.<br />
-                Timeline: Intermittent.<br />
-                No radiation reported.
+          {!loadingAnalysis && analysis && (
+            <>
+              {/* Tabs */}
+              <div className="flex space-x-6 border-b mb-4">
+                {["summary", "thoughts", "critique", "flagged"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveAnalysisTab(tab)}
+                    className={`pb-2 capitalize ${
+                      activeAnalysisTab === tab
+                        ? "border-b-2 border-blue-600 text-blue-600 font-medium"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {tab === "flagged" ? "Flags" :
+                    tab === "thoughts" ? "Clinical Thoughts" :
+                    tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
               </div>
-            )}
-            {activeTab === "objective" && (
-              <div>
-                Vitals pending.<br />
-                Physical exam not documented.
-              </div>
-            )}
-            {activeTab === "assessment" && (
-              <div>
-                Differential: GERD vs Angina.
-              </div>
-            )}
-            {activeTab === "plan" && (
-              <div>
-                Order ECG.<br />
-                Consider cardiac enzymes.
-              </div>
-            )}
-          </div>
 
-          <div className="mt-6 flex justify-between">
-            <button className="bg-gray-200 px-4 py-2 rounded">
-              Verify & Edit
-            </button>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded">
-              Approve
-            </button>
-          </div>
+              {/* Content */}
+              <div className="text-sm whitespace-pre-wrap max-h-[500px] overflow-y-auto">
+                {analysis[activeAnalysisTab]}
+              </div>
+            </>
+          )}
+
+          {!loadingAnalysis && !analysis && (
+            <p className="text-gray-400">
+              Analysis will appear here after clicking "Analyze Transcript".
+            </p>
+          )}
         </div>
+                
+
+
+         
 
         {/* RIGHT PANEL */}
         <div className="bg-white rounded-xl shadow p-4">
