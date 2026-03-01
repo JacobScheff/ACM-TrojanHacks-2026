@@ -14,6 +14,42 @@ export default function App() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [medicalHistoryFiles, setMedicalHistoryFiles] = useState([]);
 
+  /** Parse backend flagged string (JSON or Python-style tuples) into { priority, details }[] */
+  const parseFlagged = (flagged) => {
+    if (!flagged || typeof flagged !== "string") return [];
+    const trimmed = flagged.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => {
+        if (Array.isArray(item) && item.length >= 2) {
+          return { priority: String(item[0]).toLowerCase(), details: String(item[1]) };
+        }
+        if (item && typeof item === "object" && (item.priority || item.details)) {
+          return {
+            priority: String(item.priority || "medium").toLowerCase(),
+            details: String(item.details || ""),
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    } catch {
+      // Fallback: Python-style [("high", "detail"), ("medium", "detail")]
+      const tuples = trimmed.match(/\(\s*["'](high|medium|low)["']\s*,\s*["']((?:[^"'\\]|\\.)*)["']\s*\)/gi);
+      if (tuples) {
+        return tuples.map((t) => {
+          const m = t.match(/\(\s*["'](high|medium|low)["']\s*,\s*["']((?:[^"'\\]|\\.)*)["']\s*\)/i);
+          return m ? { priority: m[1].toLowerCase(), details: m[2].replace(/\\./g, (c) => c === '\\"' ? '"' : c) } : null;
+        }).filter(Boolean);
+      }
+      return [];
+    }
+  };
+
+  const flaggedList = analysis?.flagged ? parseFlagged(analysis.flagged) : [];
+
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
@@ -244,9 +280,9 @@ export default function App() {
 
           {!loadingAnalysis && analysis && (
             <>
-              {/* Tabs */}
+              {/* Tabs — Flags moved to right panel */}
               <div className="flex space-x-6 border-b mb-4">
-                {["summary", "thoughts", "critique", "flagged"].map((tab) => (
+                {["summary", "thoughts", "critique"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveAnalysisTab(tab)}
@@ -256,9 +292,7 @@ export default function App() {
                         : "text-gray-500"
                     }`}
                   >
-                    {tab === "flagged" ? "Flags" :
-                    tab === "thoughts" ? "Clinical Thoughts" :
-                    tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === "thoughts" ? "Clinical Thoughts" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 ))}
               </div>
@@ -281,29 +315,54 @@ export default function App() {
 
          
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT PANEL — Verifier & Critical Checks + Flags */}
         <div className="bg-white rounded-xl shadow p-4">
           <h2 className="font-semibold text-lg mb-4">
             Verifier & Critical Checks
           </h2>
 
-          <div className="space-y-4 text-sm">
+          <div className="space-y-3 text-sm">
+            {loadingAnalysis && (
+              <p className="text-gray-500 py-2">Running checks...</p>
+            )}
 
-            <div className="bg-red-100 border-l-4 border-red-500 p-3 rounded">
-              <strong>Low Confidence</strong><br />
-              Missing objective vitals.
-            </div>
+            {!loadingAnalysis && flaggedList.length > 0 && (
+              <>
+                {flaggedList.map((flag, i) => {
+                  const isHigh = flag.priority === "high";
+                  const isMedium = flag.priority === "medium";
+                  const bg = isHigh ? "bg-red-50" : isMedium ? "bg-amber-50" : "bg-gray-50";
+                  const border = isHigh ? "border-red-500" : isMedium ? "border-amber-500" : "border-gray-400";
+                  const title = flag.priority.charAt(0).toUpperCase() + flag.priority.slice(1) + " priority";
+                  return (
+                    <div
+                      key={i}
+                      className={`${bg} border-l-4 ${border} p-3 rounded-r-md shadow-sm`}
+                    >
+                      <strong className="text-gray-900">{title}</strong>
+                      <p className="mt-1 text-gray-700 leading-snug">{flag.details}</p>
+                    </div>
+                  );
+                })}
+              </>
+            )}
 
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded">
-              <strong>Clinical Consistency</strong><br />
-              Chest pain not fully evaluated.
-            </div>
-
-            <div className="bg-gray-100 p-3 rounded">
-              <strong>EHR Integration</strong><br />
-              Status: Pending Signature
-            </div>
-
+            {!loadingAnalysis && (!analysis || flaggedList.length === 0) && (
+              <>
+                <div className="bg-gray-50 border-l-4 border-gray-400 p-3 rounded-r-md">
+                  <strong className="text-gray-900">Low Confidence</strong>
+                  <p className="mt-1 text-gray-600">Missing objective vitals.</p>
+                </div>
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-md">
+                  <strong className="text-gray-900">Clinical Consistency</strong>
+                  <p className="mt-1 text-gray-600">Chest pain not fully evaluated.</p>
+                </div>
+                <div className="bg-gray-50 border-l-4 border-gray-400 p-3 rounded-r-md">
+                  <strong className="text-gray-900">EHR Integration</strong>
+                  <p className="mt-1 text-gray-600">Status: Pending Signature</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
