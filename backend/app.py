@@ -29,7 +29,7 @@ def getMimeType(filename):
     else:
         return "application/octet-stream"
 
-@app.route("/analyze", methods=["POST"])
+@app.route("/api/analyze", methods=["POST"])
 def analyze():
     data = request.json
     transcript = data.get("transcript", "")
@@ -117,7 +117,7 @@ def handle_options():
     if request.method == "OPTIONS":
         return '', 200
 
-@app.route("/transcribe", methods=["POST"])
+@app.route("/api/transcribe", methods=["POST"])
 def transcribe_audio():
     audio_file = request.files.get("audio")
     if not audio_file or audio_file.filename == "":
