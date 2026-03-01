@@ -47,15 +47,6 @@ def analyze():
     transcript = data.get("transcript", "")
     medicalHistoryFiles = data.get("medicalHistoryFiles", [])
 
-#     # TODO! Delete this
-#     with open(os.path.join(os.path.dirname(__file__), "sampleTranscript.txt")) as f:
-#         transcript = f.read()
-#     with open(os.path.join(os.path.dirname(__file__), "Sample Patient Medical History.pdf"), "rb") as f:
-#         medicalHistoryFiles.append({
-#             "filename": "Sample Patient Medical History.pdf",
-#             "data": f.read()
-#         })
-
     # Import list from drug_interactions_list.json
     with open(os.path.join(os.path.dirname(__file__), "drug_interactions_list.json")) as f:
         drug_interactions = json.load(f)

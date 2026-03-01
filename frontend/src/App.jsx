@@ -1,5 +1,98 @@
 import { useState, useRef, useEffect } from "react";
 
+/** Renders basic markdown (headers, bold, lists, code) without external deps */
+function MarkdownBlock({ text }) {
+  if (!text || typeof text !== "string") return null;
+  const lines = text.split("\n");
+  const out = [];
+  let i = 0;
+  let listItems = [];
+  let listOrdered = null; // true = ol, false = ul
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    const Tag = listOrdered ? "ol" : "ul";
+    out.push(
+      <Tag key={out.length} className={listOrdered ? "list-decimal pl-6 my-2" : "list-disc pl-6 my-2"}>
+        {listItems.map((item, j) => (
+          <li key={j}>{item}</li>
+        ))}
+      </Tag>
+    );
+    listItems = [];
+    listOrdered = null;
+  };
+  while (i < lines.length) {
+    const line = lines[i];
+    const ulMatch = line.match(/^\s*[-*]\s+(.*)$/);
+    const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (line.startsWith("### ")) {
+      flushList();
+      out.push(<h3 key={out.length} className="text-sm font-semibold mt-2 mb-1">{line.slice(4)}</h3>);
+    } else if (line.startsWith("## ")) {
+      flushList();
+      out.push(<h2 key={out.length} className="text-base font-semibold mt-3 mb-1">{line.slice(3)}</h2>);
+    } else if (line.startsWith("# ")) {
+      flushList();
+      out.push(<h1 key={out.length} className="text-lg font-semibold mt-3 mb-1">{line.slice(2)}</h1>);
+    } else if (ulMatch) {
+      if (listOrdered === true) flushList();
+      listOrdered = false;
+      listItems.push(parseInline(ulMatch[1]));
+    } else if (olMatch) {
+      if (listOrdered === false) flushList();
+      listOrdered = true;
+      listItems.push(parseInline(olMatch[1]));
+    } else if (line.startsWith("```")) {
+      flushList();
+      const block = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        block.push(lines[i]);
+        i++;
+      }
+      out.push(
+        <pre key={out.length} className="bg-gray-100 p-3 rounded-lg overflow-x-auto my-2 text-xs">
+          <code>{block.join("\n")}</code>
+        </pre>
+      );
+    } else {
+      flushList();
+      if (line.trim()) out.push(<p key={out.length} className="my-2">{parseInline(line)}</p>);
+    }
+    i++;
+  }
+  flushList();
+  return <div className="[&_strong]:font-semibold [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:rounded">{out}</div>;
+}
+
+function parseInline(str) {
+  const parts = [];
+  let rest = str;
+  let key = 0;
+  while (rest.length) {
+    const bold = rest.match(/\*\*(.+?)\*\*/);
+    const code = rest.match(/`([^`]+)`/);
+    let match = null;
+    let type = null;
+    let index = rest.length;
+    if (bold && bold.index < index) { match = bold; type = "bold"; index = bold.index; }
+    if (code && code.index < index) { match = code; type = "code"; index = code.index; }
+    if (index > 0) {
+      parts.push(<span key={key++}>{rest.slice(0, index)}</span>);
+    }
+    if (match && type === "bold") {
+      parts.push(<strong key={key++}>{match[1]}</strong>);
+      rest = rest.slice(index + match[0].length);
+    } else if (match && type === "code") {
+      parts.push(<code key={key++} className="bg-gray-100 px-1 rounded">{match[1]}</code>);
+      rest = rest.slice(index + match[0].length);
+    } else {
+      rest = rest.slice(index);
+    }
+  }
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("subjective");
@@ -378,9 +471,9 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Content — scrollable, does not expand page */}
-              <div className="text-sm whitespace-pre-wrap min-h-0 flex-1 overflow-y-auto">
-                {analysis[activeAnalysisTab]}
+              {/* Content — scrollable, markdown rendered */}
+              <div className="text-sm min-h-0 flex-1 overflow-y-auto">
+                <MarkdownBlock text={analysis[activeAnalysisTab] ?? ""} />
               </div>
             </>
           )}
