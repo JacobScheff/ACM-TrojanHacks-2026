@@ -132,27 +132,48 @@ def handle_options():
     if request.method == "OPTIONS":
         return '', 200
 
+def _build_transcript_with_speakers(segments, labels=("Doctor", "Patient")):
+    """Turn Whisper segments into a transcript with alternating speaker labels."""
+    if not segments:
+        return ""
+    lines = []
+    for i, seg in enumerate(segments):
+        text = (seg.get("text") if isinstance(seg, dict) else getattr(seg, "text", None) or "").strip()
+        if not text:
+            continue
+        speaker = labels[i % len(labels)]
+        lines.append(f"{speaker}: {text}")
+    return "\n\n".join(lines)
+
+
 @app.route("/api/transcribe", methods=["POST"])
 def transcribe_audio():
     audio_file = request.files.get("audio")
     if not audio_file or audio_file.filename == "":
         return jsonify({"error": "No audio file provided"}), 400
 
-    # Save the uploaded audio file to a temporary location
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
         audio_file.save(temp_audio.name)
         temp_audio_path = temp_audio.name
 
+    try:
         with open(temp_audio_path, "rb") as file:
             transcription = groqClient.audio.transcriptions.create(
                 file=(temp_audio_path, file.read()),
                 model="whisper-large-v3-turbo",
-                response_format="json",
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
+                prompt="Medical visit between a doctor and a patient. Two speakers.",
             )
-            transcript = transcription.text
-
-    # Clean up the temporary audio file
-    os.remove(temp_audio_path)
+        # Prefer segments for speaker labeling; fall back to plain text
+        segments = getattr(transcription, "segments", None)
+        if segments and len(segments) > 0:
+            transcript = _build_transcript_with_speakers(segments)
+        else:
+            transcript = getattr(transcription, "text", None) or str(transcription)
+    finally:
+        if os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
 
     return jsonify({"transcript": transcript})
 
