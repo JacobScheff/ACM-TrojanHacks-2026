@@ -3,7 +3,7 @@ frontend/node_modules
 frontend/dist
 
 # Python
-backend/venv
+api/venv
 __pycache__
 *.pyc
 
