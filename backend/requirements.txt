@@ -1,4 +1,6 @@
 flask
 flask-cors
 python-dotenv
+google-genai
 openai-whisper
+gunicorn==21.2.0
