@@ -1,9 +1,11 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000"
+  baseURL: "http://localhost:5000",
 });
 
-export const generateNote = (transcript) => {
-  return API.post("/generate-note", { transcript });
+export const generateNote = async (transcript) => {
+  return await API.post("/generate-note", {
+    transcript,
+  });
 };
