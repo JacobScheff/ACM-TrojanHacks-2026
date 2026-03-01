@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-import whisper
+import groq
+from groq import Groq
 
 app = Flask(__name__)
 CORS(app)  
@@ -16,7 +17,7 @@ CORS(app)
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GENAI_API_KEY"))
-whisperModel = whisper.load_model("base", device="cpu")
+groqClient = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def getMimeType(filename):
     ext = filename.split(".")[-1].lower()
@@ -128,25 +129,18 @@ def transcribe_audio():
         audio_file.save(temp_audio.name)
         temp_audio_path = temp_audio.name
 
-    try:
-        result = whisperModel.transcribe(temp_audio_path)
-        transcript = result["text"]
-        return jsonify({"transcript": transcript})
-    except (FileNotFoundError, OSError) as e:
-        err_str = str(e)
-        if "WinError 2" in err_str or "cannot find the file" in err_str.lower():
-            return jsonify({
-                "error": "ffmpeg is required for audio transcription but was not found. Install ffmpeg and add it to your PATH (e.g. winget install ffmpeg, choco install ffmpeg, or scoop install ffmpeg)."
-            }), 500
-        return jsonify({"error": err_str}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(temp_audio_path):
-            try:
-                os.unlink(temp_audio_path)
-            except OSError:
-                pass
+        with open(temp_audio_path, "rb") as file:
+            transcription = groqClient.audio.transcriptions.create(
+                file=(temp_audio_path, file.read()),
+                model="whisper-large-v3-turbo",
+                response_format="json",
+            )
+            transcript = transcription.text
+
+    # Clean up the temporary audio file
+    os.remove(temp_audio_path)
+
+    return jsonify({"transcript": transcript})
 
 
 
